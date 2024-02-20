@@ -1,0 +1,6 @@
+[submodule "skew-aware-rocksdb-8.9.1"]
+	path = skew-aware-rocksdb-8.9.1
+	url = git@github.com:BU-DiSC/skew-aware-rocksdb-8.9.1.git
+[submodule "skew-aware-bpk-benchmark"]
+	path = skew-aware-bpk-benchmark
+	url = git@github.com:BU-DiSC/skew-aware-bpk-benchmark.git
