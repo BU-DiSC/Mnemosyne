@@ -4,3 +4,9 @@
 [submodule "skew-aware-bpk-benchmark"]
 	path = skew-aware-bpk-benchmark
 	url = git@github.com:BU-DiSC/skew-aware-bpk-benchmark.git
+[submodule "distribute_lsm_bfsize"]
+	path = distribute_lsm_bfsize
+	url = git@github.com:altramarine/distribute_lsm_bfsize.git
+[submodule "YCSB-cpp"]
+	path = YCSB-cpp
+	url = git@github.com:BU-DiSC/YCSB-cpp.git
