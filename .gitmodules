@@ -10,3 +10,6 @@
 [submodule "YCSB-cpp"]
 	path = YCSB-cpp
 	url = git@github.com:BU-DiSC/YCSB-cpp.git
+[submodule "K-V-Workload-Generator"]
+	path = K-V-Workload-Generator
+	url = git@github.com:BU-DiSC/K-V-Workload-Generator.git
