@@ -42,7 +42,7 @@ To run the workload, you need to go to `skew-aware-bpk-benchmark` directory and 
 ```
 make
 ```
-which produces a set of executables including `bpk_benchmark`,`plain_benchmark`,`query_statistics_est_benchmark`,`simple_benchmark`. Among these executables, `bpk_benchmark` is used to run experiments Figure 3 in our paper, `query_statistics_est_benchmark` is used to run experiments in Figure 10, `simple_benchmark` is for throughput experiment in Figure 13, and all other experiments (except Figure 4 and YCSB) are executed using `plain_benchmark`.
+which produces a set of executables including `bpk_benchmark`,`plain_benchmark`,`query_statistics_est_benchmark`,`simple_benchmark`, and `simple_benchmark_2`. Among these executables, `bpk_benchmark` is used to run experiments Figure 4 in our paper, `query_statistics_est_benchmark` is used to run experiments in Figure 9, `simple_benchmark_2` is for throughput experiment in Figure 10, and all other experiments (except Figure 4 and YCSB) are executed using `plain_benchmark`. Before run any experiments, remember to run `ulimit -n 65536` to ensure that maximum open files are set, otherwise experiments can be interrupted and stop due to insufficient maximum open files.
 
 These executables have a large set of common parameters and presume that workloads are already generated using our workload generator. Take `plain_benchmark` as an example:
 
@@ -64,12 +64,12 @@ This will create a database in the current directory using path `./db_working_ho
 
 for more details.
 
-We summarize our experiment terminal commands into several scripts file. For example, to run experiment Figure 3, you can run `.\exp_bpk.sh` if you have `bpk_benchmark` executable available (remember to modify the `DB_HOME` path in the script to utilize your dedicated storage device). To run this experiment multiple times and obtain the average, you can run `.\main_bpk.sh [runs]` where [runs] is the number of times you want to run `exp_bpk.sh` and the averaged result will be stored under directory `agg_output_by_bpk/` (thie folder will be created if not existing). Similarly, you can use `.\main_plain.sh` to run `exp_plain.sh` multiple times and obtain the average.
+We summarize our experiment terminal commands into several scripts file. For example, to run experiment Figure 4, you can run `.\exp_bpk.sh` if you have `bpk_benchmark` executable available (remember to modify the `DB_HOME` path in the script to utilize your dedicated storage device). To run this experiment multiple times and obtain the average, you can run `.\main_bpk.sh [runs]` where [runs] is the number of times you want to run `exp_bpk.sh` and the averaged result will be stored under directory `agg_output_by_bpk/` (thie folder will be created if not existing). Similarly, you can use `.\main_plain.sh` to run `exp_plain.sh` multiple times and obtain the average.
 
 
 To produce Figure 4, you can run `main.sh` to collect the access statistics. To save your time, we summarize the access statistics in a zipped file `file-access-exp-data.zip` under `distribute_lsm_bfsize`. You can then go into this directory and run the experiments (uncompress the zipped file and run `.\test.sh`)
 
-For Figure 10, you can run `.\exp_query_statistics_est_benchmark.sh` (since we are only comparing the statistics, you can create a RAM disk and specify `DB_HOME` as the mounted path for your RAM disk). We do not offer extra script to run this experiment multiple times and get the average since you can achieve this by specifying `-R [X]` when executing `query_statistics_est_benchmark` (you can change `R` in the file `exp_query_statistics_est_benchmark.sh`).
+For Figure 9, you can run `.\exp_query_statistics_est_benchmark.sh` (since we are only comparing the statistics, you can create a RAM disk and specify `DB_HOME` as the mounted path for your RAM disk). We do not offer extra script to run this experiment multiple times and get the average since you can achieve this by specifying `-R [X]` when executing `query_statistics_est_benchmark` (you can change `R` in the file `exp_query_statistics_est_benchmark.sh`).
 
 For Figure 11, run `main_plain.sh [X]` where `[X]` is the number of times you want to run `exp_plain.sh`, and the experimental result (average one) will be summarzied under a folder `agg_output/` in the current directory. Figure 12 is plotted by re-using the experimental results from Figure 11. Similarly, for Figure 14, you just need to change the `DB_HOME` in `exp_plain.sh` to a slower storage device.
 
