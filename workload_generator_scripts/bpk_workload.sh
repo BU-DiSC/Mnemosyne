@@ -1,24 +1,17 @@
 #!/bin/bash
-I="2000000"
-Q="4000000"
-Z="0.5"
+I="4000000"
+Q="15000000"
+L="0.25"
 E="512"
-Z_LIST=("0.0" "0.5" "1.0")
-ZD_LIST=("0" "3")
-#ZALPHA_LIST=("0.7" "1.0" "1.3")
-ZALPHA_LIST=()
-../K-V-Workload-Generator/load_gen -I${I} -E${E}
+Z_LIST=("1.0" "0.75" "0.5" "0.25" "0.1" "0.05" "0.01" "0.0")
+ZD_LIST=("0" "1")
+NDEV="5.0"
+../K-V-Workload-Generator/load_gen -I${I} -E${E} -L${L}
 for Z in ${Z_LIST[@]}
 do
 	for ZD in ${ZD_LIST[@]}
 	do
-		../K-V-Workload-Generator/load_gen -E${E} -Q${Q} -Z ${Z} --ZD ${ZD} --ED ${ZD} --PL --OP Z${Z}_ZD${ZD}_query_workload.txt 
-	done
-	for ALPHA in ${ZALPHA_LIST[@]}
-	do
-		../K-V-Workload-Generator/load_gen -E${E} -Q${Q} -Z ${Z} --ZD 3 --ED 3 --ED_ZALPHA ${ALPHA} --ZD_ZALPHA ${ALPHA} --PL --OP Z${Z}_ZD3_ZALPHA${ALPHA}_query_workload.txt 
+		../K-V-Workload-Generator/load_gen -L${L} -E${E} -Q${Q} -Z ${Z} --ZD ${ZD} --ED ${ZD} --ZD_NDEV ${NDEV} --ED_NDEV ${NDEV} --PL --OP Z${Z}_ZD${ZD}_query_workload.txt 
 	done
 done
 mv workload.txt ingestion_workload.txt
-#head -${I} workload.txt > ingestion_workload.txt
-#tail -${Q} workload.txt > query_workload.txt

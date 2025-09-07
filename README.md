@@ -1,79 +1,196 @@
 
 
-<H1> The codebase for "Mnemosyne: Dynamic Workload-Aware BF Tuning via Accurate Statistics in LSM trees" </H1>
+# The codebase for "Mnemosyne: Dynamic Workload-Aware BF Tuning via Accurate Statistics in LSM trees" 
 
-This repository contains four submodules: skew-aware-RocksDB (modified based on v8.9.1), benchmark code, our workload generator, YCSB-cpp, and a standalone efficiency benchmark code when solving the optimal false positive rate given the access statistics.
+The repository is structured as follows:
 
-<H1> Workload Generation </H1>
+* **`skew-aware-rocksdb-8.9.1/`**: A modified version of RocksDB (v8.9.1) that incorporates Mnemosyne and Mnemosyne+.
+* **`skew-aware-bpk-benchmark/`**: Contains the main benchmark scripts for our experiments.
+* **`K-V-Workload-Generator/`**: Tools for generating custom key-value workloads (see [KVBench](https://dl.acm.org/doi/abs/10.1145/3662165.3662765)).
+* **`workload_generator_scripts/`**: Scripts for automating workload generation.
+* **`plot_scripts/`**: Scripts to generate plots from the benchmark results.
+* **`YCSB-cpp/`**: Contains the YCSB benchmark scripts.
+* **`distribute_lsm_bfsize/`**: a standalone microbenchmark when solving the optimal bits-per-key assignment given access statistics.
+* **`exp-figures/`**: Directory where the generated figures will be saved.
 
-To generate a key-value workload, you need to go into directory `K-V-Workload-Generator` and simply give 
+
+## Hardware and Software Environment
+
+All benchmarks were executed on the hardware environment specified below. Please note that absolute performance metrics (e.g., latency, throughput) will vary depending on the system configuration. However, other results, such as read bytes and relative performance between methods, should be consistent with the findings presented in our paper.
+
+* **CPU**: 2x Intel Xeon Gold 6230 2.1GHz (each with 20 cores and virtualization enabled)
+* **Memory**: 375GB DDR4 RAM
+* **Storage**:
+    * **Fast SSD**: 350GB Optane P4800X SSD 
+    * **Slow SSD**: 932GB NVM SSD (Intel P4510 SFF) 
+    * **HDD**: 1.9TB Hard Disk Drive
+    * **RAM Disk**: An 80GB partition created in main memory using `tmpfs`.
+* **Operating System**: Rocky Linux 8.10 (Green Obsidian)
+* **Kernel**: 4.18.0-553.56.1.el8\_10.x86\_64
+* **Compiler**: GCC 12.3.1
+* **Key Dependencies**:
+    *  [RocksDB Dependencies](https://github.com/facebook/rocksdb/blob/main/INSTALL.md) (e.g., zlib, bzip2, lz4, zstd)
+    * `python3` (3.6.8) and `matplotlib` (3.0.3) for plotting
+
+
+
+## Prerequisites
+
+Before running any experiments, please ensure your environment is set up correctly:
+
+1.  **Install Dependencies**: Install the necessary libraries and tools listed above using your system's package manager (e.g., `apt-get` or `yum`).
+
+2.  **Increase File Limit**: It's crucial to increase the file descriptor limit. This setting is not permanent and must be run in the same shell session as the experiments. Otherwise, experiments can be interrupted due to insufficient maximum open files.
+    ```bash
+    ulimit -n 65536
+    ```
+3.  **Storage Setup**: You will need to specify paths for your storage devices in the experiment scripts.
+    * **Fast SSD**: The primary database path is assumed to use a fast SSD with at least **100GB** of free space.
+    * **Slower SSD**: For some experiments (e.g., Figure 13), a slower SSD is required. This drive should have at least **40GB** of free space.
+    * **HDD**: For codebase, logging, and workloads. To accommodate all workloads, the HDD should have at least **300GB** free space. If not, you may have to run experimental sripts separately and manually remove unused workloads to release space, but this still requires at least **80GB** free space. 
+    * **RAM Disk (Optional but Recommended)**: To significantly accelerate experiments for Figure 4 and Figure 10, create and use a RAM disk of at least **80GB**.
+        ```bash
+        # Example for creating an 80GB RAM disk
+        sudo mkdir /mnt/ramdisk
+        sudo mount -t tmpfs -o size=80G tmpfs /mnt/ramdisk
+        ```
+
+## SSD Performance Expectations
+
+Our in-house SSDs have a higher write throughput than standard AWS NVMe SSDs. As a result, you may observe a **2.5-5x longer execution time** when running these experiments on commodity cloud hardware. Below is a general comparison of SSD read/write speeds to help you gauge performance expectations. Performance metrics such as latency and throughput are highly dependent on the underlying hardware. For optimal visualization, you may need to adjust the `ymax` parameter in our plotting scripts. To benchmark your storage device's random read/write throughput, we provide a fio configuration file `fio-rand-RW.fio`. After installing fio (e.g., `apt-get install fio` or `yum install fio`), run `fio fio-rand-RW.fio` with your storage device. 
+
+| SSD Type             | Typical Read Speed (MB/s) | Typical Write Speed (MB/s) |
+| :------------------- | :-----------------------: | :------------------------: |
+| **Our Fast SSD** |         1231         |         821         |
+| **Our Slow SSD** |       694       |       463        |
+| **AWS NVMe Storage (Nitro SSDs)** |       260      |       173      |
+
+*Note: These are approximate values and can vary based on the specific model, manufacturer, and system configuration.*
+
+
+## Quick Start: Running a Single Workload
+
+This section provides a detailed walkthrough for users who want to understand the individual components of the system (workload generation, compilation, etc.) by running a single experiment. For automated, full-scale reproduction of the paper's findings, please proceed directly to the `Reproducing Paper Results` section.
+
+1.  **Workload Generation**: To generate a key-value workload, you need to go into directory `K-V-Workload-Generator` and simply give 
+
+    ```
+    make
+    ./load_gen -I10000 -E512 -L0.25
+    ```
+
+     with the desired parameters. These include: Number of inserts, updates, deletes, point & range lookups, distribution styles, etc. 
+     In the above example, it will generate a workload file (e.g., `workload.txt`) with 10000 inserts (for pre-populating a database) with 128-byte key size and 384-byte value size (`E` specifies the overall entry size and `L` specifies the proportion between the key size and the key-value size).
+
+     We can further use preloading feature to generate another workload to benchmark. For example, we can run
+
+    ```
+    ./load_gen -E512 -L0.25 --PL -Q3000 --OP query_workload.txt
+    ```
+    This will generate a text file `query_workload.txt` that contains 3000 point queries on existing keys by preloading `workload.txt` generated earlier.
+
+    To vary the distribution of point queries, you can specify `--ED [ED] --ZD [ZD]`, where `[ED]` and `[ZD]` represent the distribution number for existing and non-existing point queries, respectively (distribution number: 0->uniform, 1->normal, 2->beta, 3->zipf)
+
+    More details can be found by running `./load_gen --help`.
+
+2.  **RocksDB Library Compilation**: Go to the `skew-aware-rocksdb-8.9.1` directory and run
+    ```
+    make static_lib
+    ```
+    You can speed up this process by using the `-j` flag. For example, to use all available CPU cores, run make static_lib `-j$(nproc)`. 
+
+
+3.  **Benchmarking Compilation and Execution**: We provide a rich set of benchmark codes under `skew-aware-bpk-benchmark`. You can compile all of them by `make` after you go into that directory. Here is the list of benchmark codes:
+
+    * `bpk_benchmark`: Measure the number of unnecessarily accessed data blocks by replaying the query workload against different bits-per-key allocation strategy.
+
+    * `query_lat_exp`: Pre-populate the database using an ingestion workload and measure the query performance using a mixed update and query workload (see workload type II in our paper).
+
+    * `query_statistics_est_benchmark`: Measure the estimation accuracy of the runtime access statistics.
+
+    * `runtime_tput_exp`: Measure the throughput along with the actual used bits-per-key by running a workload mixed with inserts, updates, and queries (see workoad type I in our paper)
+
+    These executables have a large set of common parameters and presume that workloads are already generated using our workload generator. Take `query_lat_exp` as an example:
+
+    ```
+    ./query_lat_exp -E [E] --dd --iwp [path/to/ingestion_workload] --qwp [path/to/benchmark_workload] --dw --dr
+    ```
+
+    where `[E]` is the entry size generated from our workload generator, `[path/to/ingestion_workload]` means the path of the ingestion workload to pre-populate a database and `[path/to/benchmark_workload]` means the path of benchmark. If you generate the workload using our commands in the first step, we will have an insert-only workload `workload.txt` and a query workload `query_workload.txt` under `K-V-Workload-Generator` directory. We can then replace the path as follows:
+
+    ```
+    ./query_lat_exp -E 512 --dd --iwp ../K-V-Workload-Generator/workload.txt --qwp ../K-V-Workload-Generator/query_workload.txt --dw --dr
+    ```
+
+    In the above example, `dr`, `dw` represent *direct read* and *direct write* respectively, and `dd` specifies *destroying the database* if there already exists one before running the experiment. By default, it builds `db_working_home` under the current directory and uses it as the database path. We also provide more parameters that users can explore in these benchmark executables. More details can be found by `./query_lat_exp --help`.
+
+---
+
+## Reproducing Paper Results
+
+We integrate all experimental scripts into one `one-for-all.sh` for easier reproducing. But you need to specify `FAST_DB_HOME`, `SLOW_DB_HOME`, and `RAM_DB_HOME` in your environment variable before you run them (ensure that there is no `/` at the end of any `DB_HOME` path). See example as follows:
 
 ```
-make
-./load_gen -I10000
+mkdir -p /scratchFastSSD/${USER}/db_working_home
+export FAST_DB_HOME=/scratchFastSSD/${USER}/db_working_home
+mkdir -p /scratchSlowSSD/${USER}/db_working_home
+export SLOW_DB_HOME=/scratchSlowSSD/${USER}/db_working_home
+mkdir -p /mnt/ramdisk/${USER}/db_working_home
+export RAM_DB_HOME=/mnt/ramdisk/${USER}/db_working_home
+./one-for-all.sh
 ```
+The figures will be plotted under `exp-figures` directory.
+Alternatively, you can run the scripts for each figure individually. This is useful for targeted reproduction or debugging. 
+The scripts for all the experiment are designed to be be executed under `exp-scripts` directory.
+Make sure that you are in `exp-scripts/` directory before you run them. 
+Below are the details for each script.
 
-with the desired parameters. These include: Number of inserts, updates, deletes, point & range lookups, distribution styles, etc. 
-In the above example, it will generate a workload file (e.g., `workload.txt`) with 10000 inserts (for pre-populating a database).
+1. `fig3.sh`: Generates workload distributions and CDF of accessed files. You can use the configured RAM disk to execute this experiment:
+    ```
+    RAM_DB_HOME=/mnt/ramdisk/${USER}/db_working_home ./fig3.sh
+    ```
+    This experiment does not repeat for three times but the pattern for workload distribution would remain roughly the same.
 
-We can further use preloading feature to generate another workload to benchmark. For example, we can run
+2. `fig4.sh`: Measures unnecessarily accessed data blocks under different workloads. This can be also executed using RAM disk as we only measure the unnecessarily data blocks. You ca
+    ```
+    RAM_DB_HOME=/mnt/ramdisk/${USER}/db_working_home ./fig4.sh
+    ```
+    In `fig4.sh`, you can specify the number of runs through `RUNS=x` where `x` is the number of runs you want to repeat.
 
-```
-./load_gen --PL -Q3000 --OP query_workload.txt
-```
-This will generate a text file `query_workload.txt` that contains 3000 point queries on existing keys by preloading `workload.txt` generated earlier.
+3. `fig5.sh`: Compare the efficiency of different solvers to obtain the best bits-per-key allocation. This experiment needs to collect the number of queries (including both empty and non-empty point queries) per file, and thus you can also use RAM disk.
+    ```
+    RAM_DB_HOME=/mnt/ramdisk/${USER}/db_working_home ./fig5.sh
+    ```
+    To repeat experiments in `fig5.sh`, you need to change the variable `runs` in file `skew-aware-bpk-benchmark/main-collect-query-stats-for-optimization-exp.sh` (line 10).
 
-To vary the distribution of point queries, you can specify `--ED [ED] --ZD [ZD]`, where `[ED]` and `[ZD]` represent the distribution number for existing and non-existing point queries, respectively (distribution number: 0->uniform, 1->normal, 2->beta, 3->zipf)
+4. `fig10.sh`: Measures the accuracy of statistics estimation methods. This experiment periodically copies the whole database to obtain the ground-truth access statistics for a certain interval. To ensure the persistency of copied database, it is recommended using fast SSD device.
+    ```
+    FAST_DB_HOME=/scratchFastSSD/${USER}/db_working_home ./fig10.sh
+    ```
+    You can specify the number of runs by changing variable `R` in file `skew-aware-bpk-benchmark/exp_query_statistics_est_benchmark.sh` (line 8).
 
-More details can be found by running `./load_gen --help`.
+5. `fig11.sh`: Meausres the runtime throughput and actual bits-per-key for workload type I (40M inserts, mixed with 40M empty queries and 20M updates). To eliminate the impact from system cache, we turn on *direct read* flag when running the database, which means RAM\_DB\_HOME would not be supported in this experiment.
 
-<H1> Compiling RocksDB </H1>
+    ```
+    FAST_DB_HOME=/scratchFastSSD/${USER}/db_working_home ./fig11.sh
+    ```
+    You can specify the number of runs by changing variable `R` in file `skew-aware-bpk-benchmark/tput_exp.sh` (line 7).
 
-After that, make sure that you are able to skew-aware-rocksdb-8.9.1. To do that under `skew-aware-rocksdb-8.9.1` directory and run:
-```
-make static_lib
-```
-You can speedup this process using more threads `-j[X]` where `[X]` can be replaced by the number of threads you may use. If you cannot compile the static library successfully due to lack of package, please check [here](https://github.com/facebook/rocksdb/blob/main/INSTALL.md) for more info. 
+6. `fig12.sh`: Meausres the query latency for workload type II (21M inserts followed by 31M mixed queries and 10M updates) on the fast SSD. We turn on *direct read* so RAM\_DB\_HOME is not supported in this experiment.
+    ```
+    FAST_DB_HOME=/scratchFastSSD/${USER}/db_working_home ./fig12.sh
+    ```
+    You can directly set the number of runs in `fig12.sh` by specifying the variable `RUNS`, just like `fig4.sh`.
 
-<H1> Running Experiments </H1>
+7. `fig13-14.sh`: Measures the query latency and the number of read bytes for workload type II using a slower SSD.
+    ```
+    SLOW_DB_HOME=/scratchSlowSSD/${USER}/db_working_home ./fig13-14.sh
+    ```
+    Similar to `fig12.sh` and `fig4.sh`, you can customize the number of runs to repeat by changing variable `RUNS` in `fig13-14.sh`.
 
-To run the workload, you need to go to `skew-aware-bpk-benchmark` directory and compile the executables:
-
-```
-make
-```
-which produces a set of executables including `bpk_benchmark`,`plain_benchmark`,`query_statistics_est_benchmark`,`simple_benchmark`, and `simple_benchmark_2`. Among these executables, `bpk_benchmark` is used to run experiments Figure 4 in our paper, `query_statistics_est_benchmark` is used to run experiments in Figure 10, `simple_benchmark_2` is for throughput experiment in Figure 11, and all other experiments (except Figures 4 and 5) are executed using `plain_benchmark`. Before run any experiments, remember to run `ulimit -n 65536` to ensure that maximum open files are set, otherwise experiments can be interrupted and stop due to insufficient maximum open files. To produce Figure 5, you can execute `exp-collect-query-stats.sh` under the `skew-aware-bpk-benchmark` which still uses `plain_benchmark` but only collects the access statistics, and copy the statistics results to `distributs_lsm_bfsize` folder to run the efficiency experiment.
-
-These executables have a large set of common parameters and presume that workloads are already generated using our workload generator. Take `plain_benchmark` as an example:
-
-```
-./plain_benchmark -E [E] --dd --iwp [path/to/ingestion_workload] --qwp [path/to/benchmark_workload] --dw --dr
-```
-where `[E]` is the entry size generated from our workload generator, `[path/to/ingestion_workload]` means the path of the ingestion workload to pre-populate a database and `[path/to/benchmark_workload]` means the path of benchmark.
-
-If you generate the workload without specifying the entry size (by default, the entry size is 8 in the workload generator), we can replace the path as follows:
-
-```
-./plain_benchmark -E 8 --dd --iwp ../K-V-Workload-Generator/workload.txt --qwp ../K-V-Workload-Generator/query_workload.txt --dw --dr
-```
-This will create a database in the current directory using path `./db_working_home`, populate the database using the ingestion workload, and then benchmark RocksDB using the query workload (`dw` and `dr` respectively represent direct write and direct read). The experiment results (e.g., latency or throughput) are printed when the benchmark finishes. You can also specify `--path=[/path/to/database]` to change the database path, you mostly need to change this path to the specific SSD device if you have a dedicated one.  More options are available. Type:
-
-```
-./plain_benchmark --help 
-```
-
-for more details.
-
-We summarize our experiment terminal commands into several scripts file. For example, to run experiment Figure 4, you can run `.\exp_bpk.sh` if you have `bpk_benchmark` executable available (remember to modify the `DB_HOME` path in the script to utilize your dedicated storage device). To run this experiment multiple times and obtain the average, you can run `.\main_bpk.sh [runs]` where [runs] is the number of times you want to run `exp_bpk.sh` and the averaged result will be stored under directory `agg_output_by_bpk/` (thie folder will be created if not existing). Similarly, you can use `.\main_plain.sh` to run `exp_plain.sh` multiple times and obtain the average.
-
-
-To produce Figure 4, you can run `main.sh` to collect the access statistics. To save your time, we summarize the access statistics in a zipped file `file-access-exp-data.zip` under `distribute_lsm_bfsize`. You can then go into this directory and run the experiments (uncompress the zipped file and run `.\test.sh`)
-
-For Figure 10, you can run `.\exp_query_statistics_est_benchmark.sh` (since we are only comparing the statistics, you can create a RAM disk and specify `DB_HOME` as the mounted path for your RAM disk). We do not offer extra script to run this experiment multiple times and get the average since you can achieve this by specifying `-R [X]` when executing `query_statistics_est_benchmark` (you can change `R` in the file `exp_query_statistics_est_benchmark.sh`).
-
-For Figure 12, run `main_plain.sh [X]` where `[X]` is the number of times you want to run `exp_plain.sh`, and the experimental result (average one) will be summarzied under a folder `agg_output/` in the current directory. Figure 13 is plotted by re-using the experimental results from Figure 12. Similarly, for Figure 13, you just need to change the `DB_HOME` in `exp_plain.sh` to a slower storage device.
-
-<!--Experiments for Figure 14 and 15 are executed by `exp_throughput_simple.sh` and `scalability.sh`, respectively. You can specify `R` in `exp_throughput_simple.sh` to run it multiple times and get the average result for the throughput experiment. For the scalability experiment, you can use `.\main_scalability.sh` to run the scalability experiment multiple times and obtain the average under directory `agg_scalability`.
-
-The experimental results in Figure 16 are obtained using YCSB-cpp repository. go into this directory and follow the instruction to compile an executable `ycsb` (which requires you already compile `skew-aware-rocksdb-8.9.1`) and run `.\test.sh`. You can also change many parameters in `test.sh`. For example, you can specify the number of times you run the experiment by changing `runs` and you can also specify the database path using a dedicated storage device (by changing `DB_HOME`)-->
-
+8. `fig15-16.sh`: Measures the throughput in YCSB with different workloads and different scales.
+    ```
+    FAST_DB_HOME=/scratchFastSSD/${USER}/db_working_home ./fig15-16.sh
+    ```
+    For YCSB experiments, you need to change the number of runs separately for Figures 15 and 16 if you want to customize the number of runs.
+    For Figure 15, you need to change the variable `runs` in `YCSB-cpp/run_ycsb_basic.sh` (line 92), while for the scalability experiment, you need to the variable `runs` in `YCSB-cpp/run_ycsb_basic.sh` (line 76).
