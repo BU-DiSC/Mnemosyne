@@ -139,6 +139,22 @@ mkdir -p /mnt/ramdisk/${USER}/db_working_home
 export RAM_DB_HOME=/mnt/ramdisk/${USER}/db_working_home
 ./one-for-all.sh
 ```
+
+We also provide a Dockerfile for you to run the experiments. 
+```
+docker build . -t sigmodari
+docker run --ulimit nofile=65536:65536 \
+    -v ${FAST_DB_HOME}:/fast_db_home \
+    -v ${RAM_DB_HOME}:/ram_db_home \
+    -v ${SLOW_DB_HOME}:/slow_db_home \
+    # 2. Optionally, pass the mount points as ENV variables (if your script needs them)
+    # The script will use the values defined in the Dockerfile or overridden here
+    -e FAST_DB_HOME=/mnt/fast_db \
+    -e RAM_DB_HOME=/mnt/ram_db \
+```
+
+You are also allowed to run specific experiments that run FAST_DB_HOME, SLOW_DB_HOME, or RAM_DB_HOME through `./one-for-all.sh fast`, `./one-for-all.sh slow`, or `./one-for-all.sh ram`.
+
 The figures will be plotted under `exp-figures` directory.
 Running all the experiments with 3 runs would take around 10 days using our device. If you are using slower SSDs, the total execution
 time could be even longer.
@@ -148,6 +164,7 @@ Make sure that you are in `exp-scripts/` directory before you run them.
 You can also specify the number of repeated runs for each experiment separately to reduce the overall experiment execution time.
 For example, as YCSB scalability experiment takes the longest time, you may adjust the number of runs
 of YCSB experiments to 1 and keep 3 runs for other experiments.
+
 Below are the details for each script.
 
 1. `fig3.sh`: Generates workload distributions and CDF of accessed files. You can use the configured RAM disk to execute this experiment:
