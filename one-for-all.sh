@@ -77,6 +77,10 @@ cd K-V-Workload-Generator/
 make load_gen
 cd -
 
+cd skew-aware-rocksdb-8.9.1/
+make static_lib -j 16
+cd -
+
 cd skew-aware-bpk-benchmark/
 make
 cd -
