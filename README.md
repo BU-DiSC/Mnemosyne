@@ -145,12 +145,13 @@ We also provide a Dockerfile for you to run the experiments.
 docker build . -t sigmodari
 docker run --ulimit nofile=65536:65536 \
     -v ${FAST_DB_HOME}:/fast_db_home \
-    -v ${RAM_DB_HOME}:/ram_db_home \
     -v ${SLOW_DB_HOME}:/slow_db_home \
+    -v ${RAM_DB_HOME}:/ram_db_home \
     # 2. Optionally, pass the mount points as ENV variables (if your script needs them)
     # The script will use the values defined in the Dockerfile or overridden here
-    -e FAST_DB_HOME=/mnt/fast_db \
-    -e RAM_DB_HOME=/mnt/ram_db \
+    -e FAST_DB_HOME=/fast_db_home \
+    -e SLOW_DB_HOME=/slow_db_home \
+    -e RAM_DB_HOME=/ram_db_home \
 ```
 
 You are also allowed to run specific experiments that run FAST_DB_HOME, SLOW_DB_HOME, or RAM_DB_HOME through `./one-for-all.sh fast`, `./one-for-all.sh slow`, or `./one-for-all.sh ram`.
