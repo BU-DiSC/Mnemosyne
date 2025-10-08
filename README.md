@@ -140,9 +140,14 @@ export RAM_DB_HOME=/mnt/ramdisk/${USER}/db_working_home
 ./one-for-all.sh
 ```
 The figures will be plotted under `exp-figures` directory.
-Alternatively, you can run the scripts for each figure individually. This is useful for targeted reproduction or debugging. 
+Running all the experiments with 3 runs would take around 10 days using our device. If you are using slower SSDs, the total execution
+time could be even longer.
+Alternatively, you can run the scripts for each figure individually. This is useful for targeted reproduction, or debugging.
 The scripts for all the experiment are designed to be be executed under `exp-scripts` directory.
 Make sure that you are in `exp-scripts/` directory before you run them. 
+You can also specify the number of repeated runs for each experiment separately to reduce the overall experiment execution time.
+For example, as YCSB scalability experiment takes the longest time, you may adjust the number of runs
+of YCSB experiments to 1 and keep 3 runs for other experiments.
 Below are the details for each script.
 
 1. `fig3.sh`: Generates workload distributions and CDF of accessed files. You can use the configured RAM disk to execute this experiment:
