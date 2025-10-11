@@ -4,6 +4,7 @@ FROM ubuntu:18.04
 RUN apt-get update && apt-get install -y git python3 python3-pip pkg-config build-essential libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev
 
 RUN pip3 install matplotlib==3.0.3
+RUN pip3 install pandas=1.3.4
 
 RUN git clone https://github.com/BU-DiSC/Mnemosyne.git
 WORKDIR Mnemosyne

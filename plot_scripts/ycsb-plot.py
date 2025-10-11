@@ -66,7 +66,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser('ycsb-plot')
-    parser.add_argument('--path',help='suffix to be plot',type=str, default='../YCSB-cpp/exp-th1_dynamic_cmpct/ycsb_agg_exp.txt')
+    parser.add_argument('--path',help='suffix to be plot',type=str, default='../YCSB-cpp/exp-th1_dynamic_cmpact/ycsb_agg_exp.txt')
     parser.add_argument('--name',help='name of the plot', default='../exp-figures/ycsb-th1.pdf')
     parser.add_argument('--onlyMnemosyne',help='if only plot Mnemosyne', action='store_true')
     parser.add_argument('--showLegend', action='store_true', help='show the legend')

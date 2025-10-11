@@ -30,7 +30,7 @@ All benchmarks were executed on the hardware environment specified below. Please
 * **Compiler**: GCC 12.3.1
 * **Key Dependencies**:
     *  [RocksDB Dependencies](https://github.com/facebook/rocksdb/blob/main/INSTALL.md) (e.g., zlib, bzip2, lz4, zstd)
-    * `python3` (3.6.8) and `matplotlib` (3.0.3) for plotting
+    * `python3` (3.6.8), `matplotlib` (3.0.3), `pandas` (1.3.4) for plotting
 
 
 
@@ -142,11 +142,13 @@ export RAM_DB_HOME=/mnt/ramdisk/${USER}/db_working_home
 
 We also provide a Dockerfile for you to run the experiments. 
 ```
+mkdir exp-figures-from-docker
 docker build . -t mnemosyne
 docker run --ulimit nofile=65536:65536 \
 	-v ${FAST_DB_HOME}:/fast_db_home \
 	-v ${SLOW_DB_HOME}:/slow_db_home \
 	-v ${RAM_DB_HOME}:/ram_db_home \
+        -v $(pwd)/exp-figures-from-docker:/Mnemosyne/exp-figures/
 	-e FAST_DB_HOME=/fast_db_home \
 	-e SLOW_DB_HOME=/slow_db_home \
 	-e RAM_DB_HOME=/ram_db_home mnemosyne
