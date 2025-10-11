@@ -148,15 +148,15 @@ docker run --ulimit nofile=65536:65536 \
 	-v ${FAST_DB_HOME}:/fast_db_home \
 	-v ${SLOW_DB_HOME}:/slow_db_home \
 	-v ${RAM_DB_HOME}:/ram_db_home \
-        -v $(pwd)/exp-figures-from-docker:/Mnemosyne/exp-figures/
+	-v $(pwd)/exp-figures-from-docker:/Mnemosyne/exp-figures \
 	-e FAST_DB_HOME=/fast_db_home \
 	-e SLOW_DB_HOME=/slow_db_home \
 	-e RAM_DB_HOME=/ram_db_home mnemosyne
 ```
 
-You are also allowed to run specific experiments that run FAST_DB_HOME, SLOW_DB_HOME, or RAM_DB_HOME through `./one-for-all.sh fast`, `./one-for-all.sh slow`, or `./one-for-all.sh ram`.
+You are also allowed to run specific experiments that run `FAST_DB_HOME`, `SLOW_DB_HOME`, or `RAM_DB_HOME` through `./one-for-all.sh fast`, `./one-for-all.sh slow`, or `./one-for-all.sh ram`.
 
-The figures will be plotted under `exp-figures` directory.
+The figures will be plotted under `exp-figures` directory if you run experiments without Docker. If you are using Docker container to run the experiments, the figures are also output to `/Mnemosyne/exp-figures/` in the container, which is mounted to `$(pwd)/exp-figures-from-docker` in the host machine.
 Running all the experiments with 3 runs would take around 10 days using our device. If you are using slower SSDs, the total execution
 time could be even longer.
 Alternatively, you can run the scripts for each figure individually. This is useful for targeted reproduction, or debugging.
@@ -192,14 +192,14 @@ Below are the details for each script.
     ```
     You can specify the number of runs by changing variable `R` in file `skew-aware-bpk-benchmark/exp_query_statistics_est_benchmark.sh` (line 8).
 
-5. `fig11.sh`: Meausres the runtime throughput and actual bits-per-key for workload type I (40M inserts, mixed with 40M empty queries and 20M updates). To eliminate the impact from system cache, we turn on *direct read* flag when running the database, which means RAM\_DB\_HOME would not be supported in this experiment.
+5. `fig11.sh`: Meausres the runtime throughput and actual bits-per-key for workload type I (40M inserts, mixed with 40M empty queries and 20M updates). To eliminate the impact from system cache, we turn on *direct read* flag when running the database, which means `RAM_DB_HOME` would not be supported in this experiment.
 
     ```
     FAST_DB_HOME=/scratchFastSSD/${USER}/db_working_home ./fig11.sh
     ```
     You can specify the number of runs by changing variable `R` in file `skew-aware-bpk-benchmark/tput_exp.sh` (line 7).
 
-6. `fig12.sh`: Meausres the query latency for workload type II (21M inserts followed by 31M mixed queries and 10M updates) on the fast SSD. We turn on *direct read* so RAM\_DB\_HOME is not supported in this experiment.
+6. `fig12.sh`: Meausres the query latency for workload type II (21M inserts followed by 31M mixed queries and 10M updates) on the fast SSD. We turn on *direct read* so `RAM_DB_HOME` is not supported in this experiment.
     ```
     FAST_DB_HOME=/scratchFastSSD/${USER}/db_working_home ./fig12.sh
     ```
