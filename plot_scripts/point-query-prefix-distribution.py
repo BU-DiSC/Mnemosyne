@@ -18,7 +18,7 @@ def print_progress_bar(iteration, total, length=50):
   percent = ("{0:.1f}").format(100 * (iteration / float(total)))
   filled_length = int(length * iteration // total)
   bar = '█' * filled_length + '-' * (length - filled_length)
-  sys.stdout.write(f'\rProgress: |{bar}| {percent}% Complete')
+  sys.stdout.write(f'\rProgress: |{bar}| {percent}% Complete'.encode('utf-8'))
   sys.stdout.flush()
   if iteration >= total:
       sys.stdout.write('\n')
